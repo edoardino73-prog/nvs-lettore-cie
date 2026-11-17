@@ -33,8 +33,7 @@ android {
 dependencies {
     // Lettura dei documenti elettronici (ICAO 9303: PACE con CAN, file DG1). Licenza LGPL.
     implementation 'org.jmrtd:jmrtd:0.7.42'
-    implementation 'net.sf.scuba:scuba-smartcards:0.0.23'
-    implementation 'net.sf.scuba:scuba-sc-android:0.0.23'
-    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+    implementation 'net.sf.scuba:scuba-smartcards:0.0.20'
+    implementation 'net.sf.scuba:scuba-sc-android:0.0.20'
     implementation 'commons-io:commons-io:2.11.0'
 }
