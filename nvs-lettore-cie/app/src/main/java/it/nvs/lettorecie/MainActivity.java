@@ -103,7 +103,7 @@ public class MainActivity extends Activity implements NfcAdapter.ReaderCallback 
             ultimo = json;
             runOnUiThread(new Runnable() {
                 @Override public void run() {
-                    txtRisultato.setText(json);
+                    txtRisultato.setText(vista(json));
                     txtRisultato.setVisibility(View.VISIBLE);
                     btnCopia.setVisibility(View.VISIBLE);
                     btnCondividi.setVisibility(View.VISIBLE);
@@ -120,6 +120,16 @@ public class MainActivity extends Activity implements NfcAdapter.ReaderCallback 
         } finally {
             occupato = false;
         }
+    }
+
+    /** Sullo schermo la fotografia (testo lunghissimo) non si mostra; negli appunti c'e' completa. */
+    private String vista(String json) {
+        try {
+            org.json.JSONObject o = new org.json.JSONObject(json);
+            org.json.JSONObject f = o.optJSONObject("foto");
+            if (f != null && f.has("base64")) f.put("base64", "(fotografia inclusa)");
+            return o.toString(2);
+        } catch (Throwable e) { return json; }
     }
 
     private void copia(boolean mostraAvviso) {

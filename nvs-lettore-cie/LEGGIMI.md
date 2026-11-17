@@ -16,8 +16,11 @@ mostra un'anteprima con i controlli e, solo dopo la conferma, riempie i campi.
 
 ## Che cosa legge e che cosa no
 - Legge: cognome, nome, data di nascita, sesso, cittadinanza, numero e scadenza del documento, codice fiscale (se presente).
+- **Dati in più (dalla costruzione 10), se la carta li mette a disposizione con il CAN:** luogo di nascita e residenza (file DG11), ente e data di rilascio
+  del documento (file DG12), elenco dei file presenti nel chip, fotografia (solo se è in formato JPEG: sulla CIE di solito è JPEG2000 e per ora viene solo segnalata).
+  Ogni file è facoltativo: se la carta non lo dà o non si legge, la lettura base riesce lo stesso e nel risultato compare il motivo (campo «chip → note»).
 - **Non usa il PIN** della carta e non lo chiede mai. Il **CAN** (6 cifre) si scrive a ogni lettura e non viene salvato.
-- Non legge la fotografia né le impronte. Residenza, stanza, referenti e MMG non sono nel chip: si compilano in NVS a mano.
+- Non legge le impronte. Stanza, referenti e MMG non sono nel chip: si compilano in NVS a mano.
 - I dati restano solo sullo schermo e negli appunti. La schermata non finisce nelle «app recenti» (protezione FLAG_SECURE).
 
 ## Come ottenere l'APK senza installare nulla (consigliato): GitHub
