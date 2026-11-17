@@ -39,7 +39,30 @@ public class CieReader {
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
     }
 
+    /** Fase in corso: se qualcosa va storto, il messaggio dice dove (utile per capire il problema). */
+    private static String fase = "";
+
+    private static String dettaglio(Throwable e) {
+        StringBuilder sb = new StringBuilder();
+        int n = 0;
+        for (Throwable t = e; t != null && n < 4; t = t.getCause(), n++) {
+            if (n > 0) sb.append(" <- ");
+            sb.append(t.getClass().getSimpleName());
+            if (t.getMessage() != null) sb.append(": ").append(t.getMessage());
+        }
+        return sb.toString();
+    }
+
     public static String leggi(Tag tag, String can) throws Exception {
+        try {
+            return leggiInterno(tag, can);
+        } catch (Exception e) {
+            throw new Exception("[" + fase + "] " + dettaglio(e));
+        }
+    }
+
+    private static String leggiInterno(Tag tag, String can) throws Exception {
+        fase = "apertura della carta";
         IsoDep isoDep = IsoDep.get(tag);
         if (isoDep == null) throw new Exception("La carta non e' una carta con chip di tipo atteso (ISO-DEP).");
         isoDep.setTimeout(20000);
@@ -50,25 +73,30 @@ public class CieReader {
                 PassportService.NORMAL_MAX_TRANCEIVE_LENGTH, PassportService.DEFAULT_MAX_BLOCKSIZE, false, false);
         service.open();
 
-        boolean pace = false;
+        // 1) elenco dei protocolli supportati dalla carta (EF.CardAccess). Se non si legge subito, si seleziona prima l'applicazione documento.
+        CardAccessFile cardAccess = null;
+        fase = "lettura EF.CardAccess";
         try {
-            CardAccessFile cardAccess = new CardAccessFile(
-                    service.getInputStream(PassportService.EF_CARD_ACCESS, PassportService.DEFAULT_MAX_BLOCKSIZE));
-            for (SecurityInfo info : cardAccess.getSecurityInfos()) {
-                if (info instanceof PACEInfo) {
-                    PACEInfo paceInfo = (PACEInfo) info;
-                    service.doPACE(PACEKeySpec.createCANKey(can), paceInfo.getObjectIdentifier(),
-                            PACEInfo.toParameterSpec(paceInfo.getParameterId()), paceInfo.getParameterId());
-                    pace = true;
-                    break;
-                }
-            }
-        } catch (Exception e) {
-            throw new Exception("La carta non ha accettato il CAN. Controlla le 6 cifre e riappoggia la carta. (" + e.getMessage() + ")");
+            cardAccess = new CardAccessFile(service.getInputStream(PassportService.EF_CARD_ACCESS, PassportService.DEFAULT_MAX_BLOCKSIZE));
+        } catch (Exception primo) {
+            fase = "selezione applicazione documento e nuova lettura EF.CardAccess";
+            service.sendSelectApplet(false);
+            cardAccess = new CardAccessFile(service.getInputStream(PassportService.EF_CARD_ACCESS, PassportService.DEFAULT_MAX_BLOCKSIZE));
         }
-        if (!pace) throw new Exception("La carta non ha risposto al protocollo PACE: potrebbe non essere una CIE 3.0.");
 
+        // 2) PACE con il CAN
+        fase = "PACE con il CAN";
+        PACEInfo paceInfo = null;
+        for (SecurityInfo info : cardAccess.getSecurityInfos()) {
+            if (info instanceof PACEInfo) { paceInfo = (PACEInfo) info; break; }
+        }
+        if (paceInfo == null) throw new Exception("la carta non dichiara il protocollo PACE");
+        service.doPACE(PACEKeySpec.createCANKey(can), paceInfo.getObjectIdentifier(),
+                PACEInfo.toParameterSpec(paceInfo.getParameterId()), paceInfo.getParameterId());
+
+        fase = "selezione applicazione documento dopo PACE";
         service.sendSelectApplet(true);
+        fase = "lettura dei dati (DG1)";
         DG1File dg1 = new DG1File(service.getInputStream(PassportService.EF_DG1, PassportService.DEFAULT_MAX_BLOCKSIZE));
         MRZInfo mrz = dg1.getMRZInfo();
 
