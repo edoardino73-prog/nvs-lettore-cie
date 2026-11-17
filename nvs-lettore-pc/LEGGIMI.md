@@ -9,6 +9,15 @@ mostra come «Generic Contactless Card Reader») e copia i dati negli appunti ne
 2. Scrivi il **CAN** (6 cifre sul fronte della carta), premi «Leggi la carta» e appoggia la CIE **ferma e piatta** al centro del lettore.
 3. Compaiono i dati e vengono copiati negli appunti. Il CAN non viene salvato; il PIN della carta non serve.
 
+## Collegamento diretto con NVS (senza appunti)
+Con il programma **aperto** sul PC, in NVS (desktop o tablet usato sul PC) la finestra «Importa da CIE (chip)» mostra il riquadro viola
+**«Leggi la carta con il lettore USB di questo computer»**: si scrive il CAN dentro NVS, si preme «Leggi la carta», si appoggia la CIE e compare l'anteprima.
+- Il programma ascolta **solo su questo computer** (127.0.0.1, porta 8765) e risponde solo ai siti autorizzati. Il sito del tablet è già nell'elenco; per ogni altro sito
+  (per esempio il sito del desktop) alla prima volta compare una finestra «richiesta di accesso» con «Consenti sempre / Solo questa volta / Rifiuta». Consenti solo l'indirizzo di NVS.
+  I siti consentiti «sempre» sono nel file `%APPDATA%\NVS Lettore CIE\siti_autorizzati.txt` (si può togliere una riga per revocare).
+- Chrome/Edge possono chiedere «Consentire a questo sito di collegarsi a dispositivi della rete locale?»: rispondere **Consenti**.
+- Se il riquadro non compare, il programma non è aperto (o è aperto due volte): resta il metodo con gli appunti.
+
 ## Cosa legge
 Come l'app Android: cognome, nome, codice fiscale, sesso, data di nascita, cittadinanza, numero e scadenza del documento, luogo di nascita, residenza,
 data di rilascio, fotografia (JPEG2000 convertita in JPEG). Residenza, comune di rilascio e simili si controllano nell'anteprima di NVS.
