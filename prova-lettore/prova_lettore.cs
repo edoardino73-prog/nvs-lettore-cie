@@ -46,8 +46,8 @@ public static class ProvaLettore
         }
     }
 
-    /// <summary>Invia un comando alla carta e restituisce la risposta (dati + SW1SW2).</summary>
-    static string Invia(IntPtr card, int proto, string etichetta, byte[] cmd, out int sw, out byte[] dati)
+    /// <summary>Invia un comando alla carta. Restituisce il codice di errore del lettore (0 = ok); sw = risposta della carta.</summary>
+    static int Invia(IntPtr card, int proto, string etichetta, byte[] cmd, bool muto, out int sw, out byte[] dati)
     {
         sw = -1; dati = new byte[0];
         IntPtr pci = Marshal.AllocHGlobal(8);
@@ -57,13 +57,13 @@ public static class ProvaLettore
         int rl = rec.Length;
         int rc = SCardTransmit(card, pci, cmd, cmd.Length, IntPtr.Zero, rec, ref rl);
         Marshal.FreeHGlobal(pci);
-        if (rc != 0) { P("   " + etichetta + ": ERRORE (" + Errore(rc) + ")"); return null; }
-        if (rl < 2) { P("   " + etichetta + ": risposta troppo corta"); return null; }
+        if (rc != 0) { if (!muto) P("   " + etichetta + ": ERRORE (" + Errore(rc) + ", 0x" + unchecked((uint)rc).ToString("X8") + ")"); return rc; }
+        if (rl < 2) { if (!muto) P("   " + etichetta + ": risposta troppo corta"); return -1; }
         sw = (rec[rl - 2] << 8) | rec[rl - 1];
         dati = new byte[rl - 2];
         Array.Copy(rec, dati, rl - 2);
-        P("   " + etichetta + ": SW=" + sw.ToString("X4") + (dati.Length > 0 ? "  (" + dati.Length + " byte)" : ""));
-        return "ok";
+        if (!muto) P("   " + etichetta + ": SW=" + sw.ToString("X4") + (dati.Length > 0 ? "  (" + dati.Length + " byte)" : ""));
+        return 0;
     }
 
     public static void Esegui()
@@ -94,8 +94,11 @@ public static class ProvaLettore
         foreach (string r in lettori) P("   - " + r);
         P("");
 
-        P("3) Appoggia la CIE sul lettore e tienila ferma (attendo fino a 40 secondi)...");
-        IntPtr card = IntPtr.Zero; int proto = 0; string usato = null; int ultimoRc = 0;
+        P("3) Appoggia la CIE al centro del lettore e tienila ferma e piatta (provo per 40 secondi)...");
+        byte[] aid = new byte[] { 0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01 };
+        byte[] sel = new byte[5 + aid.Length]; sel[1] = 0xA4; sel[2] = 0x04; sel[3] = 0x0C; sel[4] = (byte)aid.Length; Array.Copy(aid, 0, sel, 5, aid.Length);
+        IntPtr card = IntPtr.Zero; int proto = 0; string usato = null; int ultimoRc = 0, tent = 0;
+        List<string> visti = new List<string>();
         DateTime fine = DateTime.Now.AddSeconds(40);
         while (DateTime.Now < fine && card == IntPtr.Zero)
         {
@@ -103,36 +106,41 @@ public static class ProvaLettore
             {
                 IntPtr c; int att;
                 int x = SCardConnect(ctx, r, 2, 3, out c, out att);
-                if (x == 0) { card = c; proto = att; usato = r; break; }
-                ultimoRc = x;
+                if (x != 0) { ultimoRc = x; continue; }
+                tent++;
+                StringBuilder nm = new StringBuilder(256); int nlen = 256, st, pr2; byte[] at = new byte[64]; int alen = 64;
+                int rs = SCardStatus(c, nm, ref nlen, out st, out pr2, at, ref alen);
+                int sw0; byte[] d0;
+                int rc0 = Invia(c, att, "", sel, true, out sw0, out d0);
+                string riga = "   tentativo " + tent + " su \"" + r + "\": agganciata (protocollo " + (att == 1 ? "T=0" : (att == 2 ? "T=1" : att.ToString())) + ")"
+                    + (rs == 0 ? ", ATR " + Hex(at, alen) : ", stato non leggibile (0x" + unchecked((uint)rs).ToString("X8") + ")")
+                    + ", primo comando: " + (rc0 == 0 ? "risposta SW=" + sw0.ToString("X4") : "errore 0x" + unchecked((uint)rc0).ToString("X8") + " (" + Errore(rc0) + ")");
+                if (visti.Count < 8 && !visti.Contains(riga.Substring(riga.IndexOf(":")))) { visti.Add(riga.Substring(riga.IndexOf(":"))); P(riga); }
+                if (rc0 == 0) { card = c; proto = att; usato = r; break; }
+                SCardDisconnect(c, 0);
+                ultimoRc = rc0;
             }
-            if (card == IntPtr.Zero) System.Threading.Thread.Sleep(500);
+            if (card == IntPtr.Zero) System.Threading.Thread.Sleep(700);
         }
         if (card == IntPtr.Zero)
         {
-            P("   Carta NON rilevata: " + Errore(ultimoRc));
+            P("   La carta NON e' riuscita a rispondere: " + Errore(ultimoRc));
             SCardReleaseContext(ctx);
             return;
         }
-        P("   Carta rilevata sul lettore: " + usato + "  (protocollo " + (proto == 1 ? "T=0" : (proto == 2 ? "T=1" : proto.ToString())) + ")");
-
-        StringBuilder nome = new StringBuilder(256); int nl = 256, stato, pr; byte[] atr = new byte[64]; int al = 64;
-        if (SCardStatus(card, nome, ref nl, out stato, out pr, atr, ref al) == 0) P("   ATR: " + Hex(atr, al));
+        P("   Carta agganciata e funzionante sul lettore: " + usato);
         P("");
 
         int sw; byte[] d;
-        byte[] aid = new byte[] { 0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01 };
-
         P("4) Comandi base della CIE (parte documento):");
-        byte[] sel = new byte[5 + aid.Length]; sel[1] = 0xA4; sel[2] = 0x04; sel[3] = 0x0C; sel[4] = (byte)aid.Length; Array.Copy(aid, 0, sel, 5, aid.Length);
-        Invia(card, proto, "SELECT applicazione documento (comando corto)", sel, out sw, out d);
+        Invia(card, proto, "SELECT applicazione documento (comando corto)", sel, false, out sw, out d);
         bool corto = sw == 0x9000;
 
         // EF.CardAccess: elenco dei protocolli (qui c'e' PACE)
         byte[] fid = new byte[] { 0x00, 0xA4, 0x02, 0x0C, 0x02, 0x01, 0x1C };
-        Invia(card, proto, "SELECT EF.CardAccess", fid, out sw, out d);
+        Invia(card, proto, "SELECT EF.CardAccess", fid, false, out sw, out d);
         byte[] leggi = new byte[] { 0x00, 0xB0, 0x00, 0x00, 0x00 };
-        Invia(card, proto, "LEGGI EF.CardAccess", leggi, out sw, out d);
+        Invia(card, proto, "LEGGI EF.CardAccess", leggi, false, out sw, out d);
         if (sw == 0x9000 && d.Length > 0) P("   contenuto: " + Hex(d, 40) + (d.Length > 40 ? "..." : ""));
         bool pace = false;
         // OID di PACE inizia con 04 00 7F 00 07 02 02 04
@@ -144,14 +152,14 @@ public static class ProvaLettore
         // stessa SELECT ma in forma estesa (Lc a 3 byte)
         byte[] ext = new byte[7 + aid.Length]; ext[1] = 0xA4; ext[2] = 0x04; ext[3] = 0x0C; ext[4] = 0x00; ext[5] = 0x00; ext[6] = (byte)aid.Length; Array.Copy(aid, 0, ext, 7, aid.Length);
         int swE; byte[] dE;
-        string r1 = Invia(card, proto, "SELECT in forma estesa", ext, out swE, out dE);
-        bool lungo = (r1 != null && swE == 0x9000);
+        int r1 = Invia(card, proto, "SELECT in forma estesa", ext, false, out swE, out dE);
+        bool lungo = (r1 == 0 && swE == 0x9000);
         // comando con 264 byte di dati (come il passaggio di PACE): GENERAL AUTHENTICATE di prova, ci si aspetta un errore della carta (non del lettore)
         byte[] grande = new byte[7 + 264]; grande[0] = 0x10; grande[1] = 0x86; grande[4] = 0x00; grande[5] = 0x01; grande[6] = 0x08;
         grande[7] = 0x7C; grande[8] = 0x82; grande[9] = 0x01; grande[10] = 0x04; grande[11] = 0x81; grande[12] = 0x82; grande[13] = 0x01; grande[14] = 0x00;
         int swG; byte[] dG;
-        string r2 = Invia(card, proto, "comando da 264 byte (prova)", grande, out swG, out dG);
-        bool grandeOk = (r2 != null);
+        int r2 = Invia(card, proto, "comando da 264 byte (prova)", grande, false, out swG, out dG);
+        bool grandeOk = (r2 == 0);
         P("");
         P("RISULTATO:");
         P("   Lettore standard (PC/SC): SI");
