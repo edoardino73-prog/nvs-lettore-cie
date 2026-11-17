@@ -56,8 +56,11 @@ public class CieReader {
     public static String leggi(Tag tag, String can) throws Exception {
         try {
             return leggiInterno(tag, can);
-        } catch (Exception e) {
-            throw new Exception("[" + fase + "] " + dettaglio(e) + "\n\nScambi con la carta:\n" + DiagCardService.ultimi());
+        } catch (Throwable e) { // anche gli Error (classe mancante, metodo non trovato...) che altrimenti chiudono l'app
+            StringBuilder st = new StringBuilder();
+            StackTraceElement[] el = e.getStackTrace();
+            for (int i = 0; i < el.length && i < 6; i++) st.append("\n  ").append(el[i].getClassName().replaceAll("^.*\\.", "")).append(".").append(el[i].getMethodName()).append(":").append(el[i].getLineNumber());
+            throw new Exception("[" + fase + "] " + dettaglio(e) + st + "\n\nScambi con la carta:\n" + DiagCardService.ultimi());
         }
     }
 

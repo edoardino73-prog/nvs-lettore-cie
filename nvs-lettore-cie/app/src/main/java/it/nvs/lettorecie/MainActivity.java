@@ -32,6 +32,15 @@ public class MainActivity extends Activity implements NfcAdapter.ReaderCallback 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        // se l'app si chiude per un errore, lo ricorda e lo mostra alla riapertura
+        final android.content.SharedPreferences sp = getSharedPreferences("diag", MODE_PRIVATE);
+        final Thread.UncaughtExceptionHandler vecchio = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override public void uncaughtException(Thread t, Throwable e) {
+                try { sp.edit().putString("crash", android.util.Log.getStackTraceString(e)).commit(); } catch (Throwable ignorata) { }
+                if (vecchio != null) vecchio.uncaughtException(t, e);
+            }
+        });
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // niente istantanee della schermata nell'elenco delle app recenti: ci sono dati personali
@@ -43,6 +52,12 @@ public class MainActivity extends Activity implements NfcAdapter.ReaderCallback 
         btnCopia = findViewById(R.id.btnCopia);
         btnCondividi = findViewById(R.id.btnCondividi);
         nfc = NfcAdapter.getDefaultAdapter(this);
+        String crash = sp.getString("crash", null);
+        if (crash != null) {
+            sp.edit().remove("crash").apply();
+            txtRisultato.setText("L'app si e' chiusa con questo errore (mandalo a chi ti segue):\n\n" + (crash.length() > 1800 ? crash.substring(0, 1800) : crash));
+            txtRisultato.setVisibility(View.VISIBLE);
+        }
 
         btnCopia.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { copia(true); }
@@ -98,7 +113,7 @@ public class MainActivity extends Activity implements NfcAdapter.ReaderCallback 
                     if (v != null) v.vibrate(200);
                 }
             });
-        } catch (Exception e) {
+        } catch (Throwable e) {
             stato("Non riuscito: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()), true);
         } finally {
             occupato = false;
