@@ -9,7 +9,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Esegue il programma di prova (senza lettore: deve compilare e dire che non ci sono lettori)
+    - name: Esegue il programma di prova senza lettore, deve compilare e dire che non ci sono lettori
       shell: powershell
       run: |
         powershell -NoProfile -ExecutionPolicy Bypass -File prova-lettore\PROVA_LETTORE_NFC.ps1
