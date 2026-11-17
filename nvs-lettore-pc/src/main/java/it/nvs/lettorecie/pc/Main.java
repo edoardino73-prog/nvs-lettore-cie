@@ -25,9 +25,40 @@ public class Main {
     private static String ultimo = "";
 
     public static void main(String[] args) throws Exception {
+        boolean daNvs = args.length > 0 && args[0].toLowerCase().startsWith("nvscie:");
+        if (daNvs) { // avviato dal pulsante di NVS: se il programma e' gia' aperto non si apre una seconda copia
+            try (java.net.ServerSocket prova = new java.net.ServerSocket()) {
+                prova.bind(new java.net.InetSocketAddress(java.net.InetAddress.getByName("127.0.0.1"), Servizio.PORTA));
+            } catch (java.io.IOException giaAperto) { return; }
+        }
+        registraProtocollo();
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception ignorata) { }
         SwingUtilities.invokeLater(Main::finestra);
         Servizio.avvia();
+    }
+
+    /**
+     * Registra in Windows (solo per l'utente corrente, senza amministratore) l'indirizzo «nvscie://» che apre questo programma:
+     * serve al pulsante «Avvia lettore PC» di NVS. Si rifa' a ogni avvio, cosi' segue il programma se si sposta la cartella.
+     */
+    private static void registraProtocollo() {
+        try {
+            String exe = ProcessHandle.current().info().command().orElse("");
+            String m = exe.toLowerCase();
+            if (!m.endsWith(".exe") || m.endsWith("\\java.exe") || m.endsWith("\\javaw.exe")) return;
+            String cmd = ("\"" + exe + "\" \"%1\"").replace("\\", "\\\\").replace("\"", "\\\"");
+            String reg = "Windows Registry Editor Version 5.00\r\n\r\n"
+                    + "[HKEY_CURRENT_USER\\Software\\Classes\\nvscie]\r\n@=\"URL:NVS Lettore CIE\"\r\n\"URL Protocol\"=\"\"\r\n\r\n"
+                    + "[HKEY_CURRENT_USER\\Software\\Classes\\nvscie\\shell\\open\\command]\r\n@=\"" + cmd + "\"\r\n";
+            java.nio.file.Path f = java.nio.file.Files.createTempFile("nvscie", ".reg");
+            byte[] testo = reg.getBytes(java.nio.charset.StandardCharsets.UTF_16LE);
+            byte[] tutto = new byte[testo.length + 2];
+            tutto[0] = (byte) 0xFF; tutto[1] = (byte) 0xFE;
+            System.arraycopy(testo, 0, tutto, 2, testo.length);
+            java.nio.file.Files.write(f, tutto);
+            new ProcessBuilder("reg", "import", f.toString()).redirectErrorStream(true).start().waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+            java.nio.file.Files.deleteIfExists(f);
+        } catch (Throwable ignorata) { /* senza registrazione il programma funziona lo stesso, si apre a mano */ }
     }
 
     private static void finestra() {

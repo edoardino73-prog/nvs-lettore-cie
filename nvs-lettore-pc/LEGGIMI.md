@@ -15,6 +15,9 @@ Con il programma **aperto** sul PC, in NVS (desktop o tablet usato sul PC) la fi
 - Il programma ascolta **solo su questo computer** (127.0.0.1, porta 8765) e risponde solo ai siti autorizzati. Il sito del tablet è già nell'elenco; per ogni altro sito
   (per esempio il sito del desktop) alla prima volta compare una finestra «richiesta di accesso» con «Consenti sempre / Solo questa volta / Rifiuta». Consenti solo l'indirizzo di NVS.
   I siti consentiti «sempre» sono nel file `%APPDATA%\NVS Lettore CIE\siti_autorizzati.txt` (si può togliere una riga per revocare).
+- **Pulsante «Avvia lettore PC» in NVS** (accanto a «Importa da CIE»): apre questo programma dal sito. Funziona dopo che il programma è stato **aperto a mano almeno una volta**
+  (al primo avvio registra in Windows, solo per il tuo utente e senza amministratore, l'indirizzo `nvscie://`; se sposti la cartella si riaggiorna a ogni avvio).
+  Il browser chiede una volta «Aprire NVS Lettore CIE PC?»: spunta «Consenti sempre» e conferma. Se il programma è già aperto non se ne apre un secondo.
 - Chrome/Edge possono chiedere «Consentire a questo sito di collegarsi a dispositivi della rete locale?»: rispondere **Consenti**.
 - Se il riquadro non compare, il programma non è aperto (o è aperto due volte): resta il metodo con gli appunti.
 
