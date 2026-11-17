@@ -31,7 +31,7 @@ jobs:
     - name: Crea il programma per Windows (con Java incluso, non serve installare nulla)
       shell: pwsh
       run: |
-        $mods = "java.base,java.desktop,java.logging,java.smartcardio,java.xml,java.naming,java.prefs,jdk.crypto.ec,jdk.localedata"
+        $mods = "java.base,java.desktop,java.logging,java.smartcardio,java.xml,jdk.httpserver,java.naming,java.prefs,jdk.crypto.ec,jdk.localedata"
         jlink --add-modules $mods --strip-debug --no-header-files --no-man-pages --output runtime
         jpackage --type app-image --name "NVS Lettore CIE PC" --input build/libs --main-jar nvs-lettore-pc.jar --main-class it.nvs.lettorecie.pc.Main --runtime-image runtime --dest dist
         Compress-Archive -Path "dist/NVS Lettore CIE PC" -DestinationPath "NVS-Lettore-CIE-PC.zip"

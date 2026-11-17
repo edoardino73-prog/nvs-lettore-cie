@@ -19,7 +19,7 @@ import java.util.List;
 public class Main {
 
     private static JTextField campoCan;
-    private static JLabel stato;
+    private static JLabel stato, collegamento;
     private static JTextArea risultato;
     private static JButton btnLeggi, btnCopia;
     private static String ultimo = "";
@@ -27,6 +27,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception ignorata) { }
         SwingUtilities.invokeLater(Main::finestra);
+        Servizio.avvia();
     }
 
     private static void finestra() {
@@ -55,7 +56,11 @@ public class Main {
         riga.add(btnCopia);
         centro.add(riga, BorderLayout.NORTH);
         stato = new JLabel(" ");
-        centro.add(stato, BorderLayout.CENTER);
+        collegamento = new JLabel(" ");
+        JPanel giu = new JPanel(new GridLayout(2, 1));
+        giu.add(stato);
+        giu.add(collegamento);
+        centro.add(giu, BorderLayout.CENTER);
         p.add(centro, BorderLayout.CENTER);
 
         risultato = new JTextArea(18, 70);
@@ -74,7 +79,7 @@ public class Main {
         campoCan.requestFocusInWindow();
     }
 
-    private static void stato(String testo, boolean errore) {
+    static void stato(String testo, boolean errore) {
         SwingUtilities.invokeLater(() -> {
             stato.setText("<html>" + testo.replace("&", "&amp;").replace("<", "&lt;") + "</html>");
             stato.setForeground(errore ? new Color(0xB91C1C) : new Color(0x0F172A));
@@ -101,16 +106,7 @@ public class Main {
         stato("Cerco il lettore…", false);
         new Thread(() -> {
             try {
-                List<CardTerminal> lettori = new ArrayList<>(TerminalFactory.getDefault().terminals().list());
-                if (lettori.isEmpty()) throw new Exception("Nessun lettore di carte trovato: collega il lettore NFC USB.");
-                CardTerminal t = scegliLettore(lettori);
-                stato("Appoggia la CIE sul lettore «" + t.getName() + "» e tienila ferma…", false);
-                if (!t.isCardPresent() && !t.waitForCardPresent(30000)) throw new Exception("Nessuna carta appoggiata sul lettore (tempo scaduto).");
-                Thread.sleep(400); // lascia che la carta si stabilizzi sull'antenna
-                stato("Lettura in corso: non muovere la carta…", false);
-                CardService svc = new TerminalCardService(t);
-                String json;
-                try { json = CieCore.leggi(svc, can); } finally { try { svc.close(); } catch (Throwable ignorata) { } }
+                String json = leggiCarta(can, 30000);
                 ultimo = json;
                 copia(json);
                 SwingUtilities.invokeLater(() -> { risultato.setText(vista(json)); risultato.setCaretPosition(0); btnCopia.setEnabled(true); });
@@ -123,7 +119,43 @@ public class Main {
         }, "lettura").start();
     }
 
+    private static final java.util.concurrent.locks.ReentrantLock BLOCCO = new java.util.concurrent.locks.ReentrantLock();
+
+    /** Elenco dei lettori di carte collegati (vuoto se nessuno o se il servizio Smart card non risponde). */
+    static List<String> nomiLettori() {
+        List<String> r = new ArrayList<>();
+        try { for (CardTerminal t : TerminalFactory.getDefault().terminals().list()) r.add(t.getName()); } catch (Throwable ignorata) { }
+        return r;
+    }
+
+    /** Aspetta la carta sul lettore, la legge col CAN e restituisce il testo JSON "nvs-cie/1". Una lettura alla volta. */
+    static String leggiCarta(String can, int attesaMs) throws Exception {
+        if (!BLOCCO.tryLock()) throw new Exception("Una lettura e' gia' in corso.");
+        try {
+            stato("Cerco il lettore…", false);
+            List<CardTerminal> lettori = new ArrayList<>(TerminalFactory.getDefault().terminals().list());
+            if (lettori.isEmpty()) throw new Exception("Nessun lettore di carte trovato: collega il lettore NFC USB.");
+            CardTerminal t = scegliLettore(lettori);
+            stato("Appoggia la CIE sul lettore «" + t.getName() + "» e tienila ferma…", false);
+            if (!t.isCardPresent() && !t.waitForCardPresent(attesaMs)) throw new Exception("Nessuna carta appoggiata sul lettore (tempo scaduto).");
+            Thread.sleep(400); // lascia che la carta si stabilizzi sull'antenna
+            stato("Lettura in corso: non muovere la carta…", false);
+            CardService svc = new TerminalCardService(t);
+            try { return CieCore.leggi(svc, can); } finally { try { svc.close(); } catch (Throwable ignorata) { } }
+        } finally {
+            BLOCCO.unlock();
+        }
+    }
+
     /** Sullo schermo la fotografia (testo lunghissimo) non si mostra; negli appunti c'e' completa. */
+    static void collegamento(String testo, boolean errore) {
+        SwingUtilities.invokeLater(() -> {
+            if (collegamento == null) return;
+            collegamento.setText("<html>" + testo.replace("&", "&amp;").replace("<", "&lt;") + "</html>");
+            collegamento.setForeground(errore ? new Color(0xB91C1C) : new Color(0x15803D));
+        });
+    }
+
     private static String vista(String json) {
         try {
             org.json.JSONObject o = new org.json.JSONObject(json);
