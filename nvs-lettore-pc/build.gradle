@@ -13,6 +13,7 @@ dependencies {
     // Lettura dei documenti elettronici (ICAO 9303: PACE con CAN). Licenza LGPL.
     implementation 'org.jmrtd:jmrtd:0.7.42'
     implementation 'net.sf.scuba:scuba-smartcards:0.0.20'
+    implementation 'net.sf.scuba:scuba-sc-j2se:0.0.20'
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'org.json:json:20240303'
     // Lettura della fotografia JPEG2000 della carta
