@@ -1,0 +1,16 @@
+name: Controllo programma di prova lettore
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths: [ "prova-lettore/**", ".github/workflows/prova.yml" ]
+jobs:
+  win:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Esegue il programma di prova (senza lettore: deve compilare e dire che non ci sono lettori)
+      shell: powershell
+      run: |
+        powershell -NoProfile -ExecutionPolicy Bypass -File prova-lettore\PROVA_LETTORE_NFC.ps1
+        Get-Content prova-lettore\risultato_prova_lettore.txt
