@@ -109,8 +109,10 @@ public class MainActivity extends Activity implements NfcAdapter.ReaderCallback 
                     btnCondividi.setVisibility(View.VISIBLE);
                     copia(false);
                     stato("Letto. Dati copiati negli appunti: ora apri NVS, Anagrafica, Importa da CIE.", false);
-                    Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                    if (v != null) v.vibrate(200);
+                    try { // la vibrazione e' solo un segnale in piu': se non e' consentita non deve fermare l'app
+                        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                        if (v != null) v.vibrate(200);
+                    } catch (Throwable ignorata) { }
                 }
             });
         } catch (Throwable e) {
