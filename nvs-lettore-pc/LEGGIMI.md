@@ -18,6 +18,10 @@ Con il programma **aperto** sul PC, in NVS (desktop o tablet usato sul PC) la fi
 - **Pulsante «Avvia lettore PC» in NVS** (accanto a «Importa da CIE»): apre questo programma dal sito. Funziona dopo che il programma è stato **aperto a mano almeno una volta**
   (al primo avvio registra in Windows, solo per il tuo utente e senza amministratore, l'indirizzo `nvscie://`; se sposti la cartella si riaggiorna a ogni avvio).
   Il browser chiede una volta «Aprire NVS Lettore CIE PC?»: spunta «Consenti sempre» e conferma. Se il programma è già aperto non se ne apre un secondo.
+- **Timbratura con badge NFC** (NTAG215, Mifare e simili): con il programma acceso, in NVS → Timbratura premi una volta **«📡 Lettore NFC: spento»** (diventa «acceso» e si ricorda su quel computer).
+  Poi basta appoggiare il badge sul lettore: il programma legge il **numero di serie** della tessera e NVS lo tratta come il codice a barre (entrata/uscita, registri e firme invariati). Nella scheda «Badge» il codice letto compare nella casella: scegli l'operatore e premi «Assegna badge».
+  Un badge lasciato sul lettore conta una volta sola: va tolto prima del passaggio successivo. Le tessere con codice che cambia ad ogni lettura (CIE, telefono) vengono rifiutate con un avviso.
+  Il numero di serie si può copiare con strumenti economici: è lo stesso livello del codice a barre.
 - Chrome/Edge possono chiedere «Consentire a questo sito di collegarsi a dispositivi della rete locale?»: rispondere **Consenti**.
 - Se il riquadro non compare, il programma non è aperto (o è aperto due volte): resta il metodo con gli appunti.
 

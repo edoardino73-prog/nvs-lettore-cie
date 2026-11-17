@@ -3,7 +3,10 @@ package it.nvs.lettorecie.pc;
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.TerminalCardService;
 
+import javax.smartcardio.Card;
 import javax.smartcardio.CardTerminal;
+import javax.smartcardio.CommandAPDU;
+import javax.smartcardio.ResponseAPDU;
 import javax.smartcardio.TerminalFactory;
 import javax.swing.*;
 import java.awt.*;
@@ -161,7 +164,7 @@ public class Main {
 
     /** Aspetta la carta sul lettore, la legge col CAN e restituisce il testo JSON "nvs-cie/1". Una lettura alla volta. */
     static String leggiCarta(String can, int attesaMs) throws Exception {
-        if (!BLOCCO.tryLock()) throw new Exception("Una lettura e' gia' in corso.");
+        if (!BLOCCO.tryLock(4, java.util.concurrent.TimeUnit.SECONDS)) throw new Exception("Una lettura e' gia' in corso.");
         try {
             stato("Cerco il lettore…", false);
             List<CardTerminal> lettori = new ArrayList<>(TerminalFactory.getDefault().terminals().list());
@@ -173,6 +176,43 @@ public class Main {
             stato("Lettura in corso: non muovere la carta…", false);
             CardService svc = new TerminalCardService(t);
             try { return CieCore.leggi(svc, can); } finally { try { svc.close(); } catch (Throwable ignorata) { } }
+        } finally {
+            BLOCCO.unlock();
+        }
+    }
+
+    private static boolean badgeSulLettore = false;
+
+    /**
+     * Timbratura con badge NFC (NTAG, Mifare e simili): attende fino a attesaMs un badge NUOVO sul lettore e ne restituisce il codice
+     * identificativo (UID) in esadecimale maiuscolo. null = nessun badge nuovo (o lettore occupato con una lettura CIE).
+     * Un badge lasciato sul lettore conta una volta sola: va tolto prima di poterne passare un altro (o lo stesso).
+     */
+    static String leggiUid(int attesaMs) throws Exception {
+        if (!BLOCCO.tryLock()) return null;
+        try {
+            List<CardTerminal> lettori = new ArrayList<>(TerminalFactory.getDefault().terminals().list());
+            if (lettori.isEmpty()) throw new Exception("Nessun lettore di carte trovato: collega il lettore NFC USB.");
+            CardTerminal t = scegliLettore(lettori);
+            if (badgeSulLettore) {
+                if (t.isCardPresent()) { t.waitForCardAbsent(attesaMs); return null; }
+                badgeSulLettore = false;
+            }
+            if (!t.isCardPresent() && !t.waitForCardPresent(attesaMs)) return null;
+            badgeSulLettore = true;
+            Thread.sleep(120);
+            Card c = t.connect("*");
+            try {
+                ResponseAPDU r = c.getBasicChannel().transmit(new CommandAPDU(new byte[]{(byte) 0xFF, (byte) 0xCA, 0, 0, 0}));
+                if (r.getSW() != 0x9000 || r.getData().length == 0)
+                    throw new Exception("Il lettore non fornisce il codice di questa tessera (risposta " + Integer.toHexString(r.getSW()).toUpperCase() + ").");
+                StringBuilder h = new StringBuilder();
+                for (byte b : r.getData()) h.append(String.format("%02X", b & 0xFF));
+                stato("Badge letto: " + h + " (timbratura NFC).", false);
+                return h.toString();
+            } finally {
+                try { c.disconnect(false); } catch (Throwable ignorata) { }
+            }
         } finally {
             BLOCCO.unlock();
         }

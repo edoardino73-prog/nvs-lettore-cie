@@ -134,6 +134,27 @@ final class Servizio {
                 o.put("programma", "NVS Lettore CIE PC");
                 o.put("lettori", new JSONArray(l));
                 o.put("lettore_collegato", !l.isEmpty());
+                o.put("badge_nfc", true);
+                rispondi(ex, 200, origin, o.toString());
+                return;
+            }
+            if ("/api/badge".equals(percorso)) { /* timbratura NFC: attende un badge nuovo e ne da' il codice */
+                int sec = 15;
+                String q = ex.getRequestURI().getQuery();
+                if (q != null) for (String kv : q.split("&")) if (kv.startsWith("attesa=")) { try { sec = Math.max(1, Math.min(25, Integer.parseInt(kv.substring(7)))); } catch (Exception ignorata) { } }
+                long fine = System.currentTimeMillis() + sec * 1000L;
+                JSONObject o = new JSONObject();
+                try {
+                    while (System.currentTimeMillis() < fine) {
+                        long t0 = System.currentTimeMillis();
+                        String uid = Main.leggiUid(900);
+                        if (uid != null) { o.put("uid", uid); o.put("casuale", uid.length() == 8 && uid.startsWith("08")); break; }
+                        if (System.currentTimeMillis() - t0 < 200) Thread.sleep(300);
+                    }
+                } catch (Throwable e) {
+                    o.put("errore", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                }
+                if (!o.has("uid") && !o.has("errore")) o.put("nessuno", true);
                 rispondi(ex, 200, origin, o.toString());
                 return;
             }
