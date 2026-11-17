@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'it.nvs.tablet'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "it.nvs.tablet"
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    // Chiave di firma stabile (se presente nei segreti di GitHub): serve perche' le versioni successive si installino sopra la precedente.
+    signingConfigs {
+        nvs {
+            if (System.getenv('NVS_KS_PATH')) {
+                storeFile file(System.getenv('NVS_KS_PATH'))
+                storePassword System.getenv('NVS_KS_PASS')
+                keyAlias 'nvs'
+                keyPassword System.getenv('NVS_KS_PASS')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv('NVS_KS_PATH') ? signingConfigs.nvs : signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    packaging {
+        resources {
+            excludes += ['META-INF/versions/9/OSGI-INF/MANIFEST.MF', 'META-INF/DEPENDENCIES', 'META-INF/LICENSE*', 'META-INF/NOTICE*']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.12.0'
+    // Lettura dei documenti elettronici (ICAO 9303: PACE con CAN). Licenza LGPL.
+    implementation 'org.jmrtd:jmrtd:0.7.42'
+    implementation 'net.sf.scuba:scuba-smartcards:0.0.20'
+    implementation 'net.sf.scuba:scuba-sc-android:0.0.20'
+    implementation 'commons-io:commons-io:2.11.0'
+    // Conversione della fotografia JPEG2000 della carta in JPEG. Licenza BSD.
+    implementation 'dev.keiji.jp2:jp2-android:1.0.5'
+}
