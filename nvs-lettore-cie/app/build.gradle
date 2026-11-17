@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'it.nvs.lettorecie'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "it.nvs.lettorecie"
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    packaging {
+        resources {
+            excludes += ['META-INF/versions/9/OSGI-INF/MANIFEST.MF', 'META-INF/DEPENDENCIES', 'META-INF/LICENSE*', 'META-INF/NOTICE*']
+        }
+    }
+}
+
+dependencies {
+    // Lettura dei documenti elettronici (ICAO 9303: PACE con CAN, file DG1). Licenza LGPL.
+    implementation 'org.jmrtd:jmrtd:0.7.42'
+    implementation 'net.sf.scuba:scuba-smartcards:0.0.23'
+    implementation 'net.sf.scuba:scuba-sc-android:0.0.23'
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+    implementation 'commons-io:commons-io:2.11.0'
+}

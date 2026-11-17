@@ -1,0 +1,12 @@
+{
+  "formato": "nvs-cie/1",
+  "letto_il": "2026-11-17T09:40:00",
+  "cognome": "ROSSI",
+  "nome": "MARIA",
+  "codice_fiscale": "RSSMRA41C52L188K",
+  "data_nascita": "1941-03-12",
+  "sesso": "F",
+  "cittadinanza": "ITA",
+  "documento": { "tipo": "IDENT", "numero": "CA00000AA", "scadenza": "2034-03-12", "stato_emittente": "ITA" },
+  "mrz": { "personal_number": "", "optional2": "" }
+}
