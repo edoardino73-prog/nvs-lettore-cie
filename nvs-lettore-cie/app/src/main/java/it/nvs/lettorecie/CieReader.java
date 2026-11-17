@@ -325,7 +325,7 @@ public class CieReader {
 
     /**
      * Fotografia del DG2: sulla CIE e' di solito JPEG2000, che Chrome non sa mostrare.
-     * Se e' JPEG normale si include (base64) cosi' NVS la usa; altrimenti si segnala soltanto formato e dimensione.
+     * Se e' JPEG normale si include (base64); se e' JPEG2000 si converte in JPEG; se non riesce si segnala il motivo.
      */
     private static JSONObject estraiFoto(byte[] dg2) throws Exception {
         JSONObject f = new JSONObject();
@@ -340,11 +340,31 @@ public class CieReader {
         int len = dg2.length - ini;
         f.put("formato", mime);
         f.put("immagine_byte", len);
+        byte[] img = new byte[len];
+        System.arraycopy(dg2, ini, img, 0, len);
         if ("image/jpeg".equals(mime) && len < 400000) {
-            byte[] img = new byte[len];
-            System.arraycopy(dg2, ini, img, 0, len);
             f.put("mime", mime);
             f.put("base64", android.util.Base64.encodeToString(img, android.util.Base64.NO_WRAP));
+        } else if (mime.startsWith("image/jp2")) {
+            // JPEG2000: si converte in JPEG normale (ridotto) cosi' anche Chrome la mostra
+            try {
+                android.graphics.Bitmap bmp = new com.gemalto.jp2.JP2Decoder(img).decode();
+                if (bmp == null) throw new Exception("decodifica senza risultato");
+                f.put("larghezza", bmp.getWidth());
+                f.put("altezza", bmp.getHeight());
+                int max = 480;
+                if (bmp.getWidth() > max || bmp.getHeight() > max) {
+                    float k = Math.min(max / (float) bmp.getWidth(), max / (float) bmp.getHeight());
+                    bmp = android.graphics.Bitmap.createScaledBitmap(bmp, Math.round(bmp.getWidth() * k), Math.round(bmp.getHeight() * k), true);
+                }
+                ByteArrayOutputStream jpg = new ByteArrayOutputStream();
+                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, jpg);
+                f.put("mime", "image/jpeg");
+                f.put("base64", android.util.Base64.encodeToString(jpg.toByteArray(), android.util.Base64.NO_WRAP));
+                f.put("convertita_da", mime);
+            } catch (Throwable e) {
+                f.put("errore_conversione", dettaglio(e));
+            }
         }
         return f;
     }

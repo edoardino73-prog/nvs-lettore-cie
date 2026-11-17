@@ -36,4 +36,5 @@ dependencies {
     implementation 'net.sf.scuba:scuba-smartcards:0.0.20'
     implementation 'net.sf.scuba:scuba-sc-android:0.0.20'
     implementation 'commons-io:commons-io:2.11.0'
+    implementation 'dev.keiji.jp2:jp2-android:1.0.5'
 }
