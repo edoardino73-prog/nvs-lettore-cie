@@ -57,7 +57,7 @@ public class CieReader {
         try {
             return leggiInterno(tag, can);
         } catch (Exception e) {
-            throw new Exception("[" + fase + "] " + dettaglio(e));
+            throw new Exception("[" + fase + "] " + dettaglio(e) + "\n\nScambi con la carta:\n" + DiagCardService.ultimi());
         }
     }
 
@@ -67,7 +67,7 @@ public class CieReader {
         if (isoDep == null) throw new Exception("La carta non e' una carta con chip di tipo atteso (ISO-DEP).");
         isoDep.setTimeout(20000);
 
-        CardService cardService = CardService.getInstance(isoDep);
+        CardService cardService = new DiagCardService(CardService.getInstance(isoDep));
         cardService.open();
         PassportService service = new PassportService(cardService,
                 PassportService.NORMAL_MAX_TRANCEIVE_LENGTH, PassportService.DEFAULT_MAX_BLOCKSIZE, false, false);
