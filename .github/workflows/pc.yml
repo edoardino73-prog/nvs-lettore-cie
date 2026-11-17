@@ -1,0 +1,50 @@
+name: Lettore PC
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths: [ "nvs-lettore-pc/**", ".github/workflows/pc.yml" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: nvs-lettore-pc
+    steps:
+    - uses: actions/checkout@v4
+    - name: Java 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - name: Gradle 8.2
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.2'
+    - name: Costruisci il jar
+      run: gradle jar --no-daemon --stacktrace
+    - name: Crea il programma per Windows (con Java incluso, non serve installare nulla)
+      shell: pwsh
+      run: |
+        $mods = "java.base,java.desktop,java.logging,java.smartcardio,java.xml,java.naming,java.prefs,jdk.crypto.ec,jdk.localedata"
+        jlink --add-modules $mods --strip-debug --no-header-files --no-man-pages --output runtime
+        jpackage --type app-image --name "NVS Lettore CIE PC" --input build/libs --main-jar nvs-lettore-pc.jar --main-class it.nvs.lettorecie.pc.Main --runtime-image runtime --dest dist
+        Compress-Archive -Path "dist/NVS Lettore CIE PC" -DestinationPath "NVS-Lettore-CIE-PC.zip"
+        Get-Item NVS-Lettore-CIE-PC.zip | Select-Object Name,Length
+    - name: Carica il programma
+      uses: actions/upload-artifact@v4
+      with:
+        name: NVS-Lettore-CIE-PC
+        path: nvs-lettore-pc/NVS-Lettore-CIE-PC.zip
+    - name: Prepara una bozza di release
+      shell: bash
+      working-directory: .
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release create "pc-${{ github.run_number }}" nvs-lettore-pc/NVS-Lettore-CIE-PC.zip --draft --title "NVS Lettore CIE PC - costruzione ${{ github.run_number }}" --notes "Programma per Windows con lettore NFC USB. Non ancora collaudato su una carta vera."

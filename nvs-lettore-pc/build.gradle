@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+}
+
+repositories { mavenCentral() }
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+dependencies {
+    // Lettura dei documenti elettronici (ICAO 9303: PACE con CAN). Licenza LGPL.
+    implementation 'org.jmrtd:jmrtd:0.7.42'
+    implementation 'net.sf.scuba:scuba-smartcards:0.0.20'
+    implementation 'commons-io:commons-io:2.11.0'
+    implementation 'org.json:json:20240303'
+    // Lettura della fotografia JPEG2000 della carta
+    implementation 'com.github.jai-imageio:jai-imageio-core:1.4.0'
+    implementation 'com.github.jai-imageio:jai-imageio-jpeg2000:1.4.0'
+}
+
+// un unico file .jar con tutto dentro
+jar {
+    manifest { attributes 'Main-Class': 'it.nvs.lettorecie.pc.Main' }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/versions/9/module-info.class', 'module-info.class'
+}
