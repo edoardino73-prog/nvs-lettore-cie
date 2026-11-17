@@ -45,14 +45,17 @@ public class DiagCardService extends CardService {
     public boolean isExtendedAPDULengthSupported() { return in.isExtendedAPDULengthSupported(); }
 
     public ResponseAPDU transmit(CommandAPDU c) throws CardServiceException {
+        if ((c.getINS() & 0xFF) == 0x86 && c.getNc() > 255 && c.getNe() < 65536) { // GENERAL AUTHENTICATE con dati lunghi (PACE con DH a 2048 bit)
+            c = new CommandAPDU(c.getCLA(), c.getINS(), c.getP1(), c.getP2(), c.getData(), 65536);
+        }
         ResponseAPDU r = in.transmit(c);
         log(c, r);
         if ((r.getSW() & 0xFF00) == 0x6C00) { // lunghezza attesa sbagliata: la carta indica quella giusta
             int le = r.getSW() & 0xFF;
-            if (le == 0) le = 256;
-            CommandAPDU c2 = (c.getNe() != le)
-                    ? new CommandAPDU(c.getCLA(), c.getINS(), c.getP1(), c.getP2(), c.getData(), le)
-                    : new CommandAPDU(c.getCLA(), c.getINS(), c.getP1(), c.getP2(), c.getData());
+            // 6C00 = "serve una lunghezza che non sta in un byte": la risposta e' piu' lunga di 256 byte
+            // (es. chiave pubblica DH a 2048 bit = 264 byte). Si chiede "piu' che si puo'": Le = 65536.
+            if (le == 0) le = (c.getNe() < 256) ? 256 : 65536;
+            CommandAPDU c2 = new CommandAPDU(c.getCLA(), c.getINS(), c.getP1(), c.getP2(), c.getData(), le);
             LOG.append("(riprovo con Ne=").append(c2.getNe()).append(")\n");
             r = in.transmit(c2);
             log(c2, r);
