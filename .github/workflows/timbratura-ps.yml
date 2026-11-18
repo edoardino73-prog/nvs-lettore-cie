@@ -1,0 +1,14 @@
+name: Controllo script timbratura (salvaschermo e risveglio)
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths: [ "prova-timbratura/**", ".github/workflows/timbratura-ps.yml" ]
+jobs:
+  win:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Prova su Windows
+      shell: powershell
+      run: powershell -NoProfile -ExecutionPolicy Bypass -File prova-timbratura\prova_ci.ps1
