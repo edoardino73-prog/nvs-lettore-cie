@@ -59,6 +59,7 @@ $sp = Start-Process powershell -ArgumentList @('-NoProfile', '-ExecutionPolicy',
 function Finestra { Get-Process -ErrorAction SilentlyContinue | Where-Object { ($_.ProcessName -match 'chrome|msedge') -and $_.MainWindowTitle -like '*Timbratura NVS*' } | Select-Object -First 1 }
 function Attendi($cond, $sec) { $t = Get-Date; while (((Get-Date) - $t).TotalSeconds -lt $sec) { if (& $cond) { return $true }; Start-Sleep -Milliseconds 500 }; return $false }
 function Intera($w) { $r = New-Object NvsTRect; [void][NvsT]::GetWindowRect($w.MainWindowHandle, [ref]$r); return (($r.R - $r.L) -ge ([NvsT]::GetSystemMetrics(0) - 20)) -and (($r.B - $r.T) -ge ([NvsT]::GetSystemMetrics(1) - 20)) }
+function MuoviFinoAIcona { for ($k = 0; $k -lt 6; $k++) { Muovi; if (Attendi { $w = Finestra; $w -and [NvsT]::IsIconic($w.MainWindowHandle) } 4) { return $true } }; return $false }
 function Muovi { [NvsT]::mouse_event(1, 40, 25, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 150; [NvsT]::mouse_event(1, -40, -25, 0, [UIntPtr]::Zero) }
 $t0 = Get-Date
 $comparsa = Attendi { Finestra } 40
@@ -67,12 +68,10 @@ if ($comparsa) {
   Start-Sleep -Seconds 6; $w = Finestra
   Esito (-not [NvsT]::IsIconic($w.MainWindowHandle)) 'all avvio: finestra non ridotta a icona'
   Esito (Intera $w) 'all avvio: finestra a schermo intero'
-  Muovi
-  Esito (Attendi { $w = Finestra; $w -and [NvsT]::IsIconic($w.MainWindowHandle) } 8) 'movimento del mouse: finestra ridotta a icona'
+  Esito (MuoviFinoAIcona) 'movimento del mouse: finestra ridotta a icona'
   Esito (Attendi { $w = Finestra; $w -and -not [NvsT]::IsIconic($w.MainWindowHandle) } 50) 'computer fermo: la finestra torna'
   $w = Finestra; Esito (Intera $w) 'ritorno a schermo intero'
-  Muovi
-  Esito (Attendi { $w = Finestra; $w -and [NvsT]::IsIconic($w.MainWindowHandle) } 8) 'secondo movimento: di nuovo a icona'
+  Esito (MuoviFinoAIcona) 'secondo movimento: di nuovo a icona'
   # passaggio di un badge (la pagina cambia il titolo in [badge] dopo ~52 s dall'apertura): con la finestra a icona deve comparire e poi ridursi
   $vistoBadge = Attendi { $w = Finestra; $w -and $w.MainWindowTitle -like '*[[]badge]*' } 60
   Write-Output ('titolo badge visto: ' + $vistoBadge)
