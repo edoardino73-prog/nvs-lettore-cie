@@ -2,7 +2,7 @@
 # Apre la timbratura a schermo intero in una finestra del browser (profilo dedicato). Dopo N minuti senza che nessuno tocchi mouse o tastiera
 # la finestra e' a schermo intero; al primo movimento del mouse (o tasto) si riduce a ICONA nella barra delle applicazioni.
 # Al passaggio di un badge con la finestra a icona, compare a schermo intero per qualche secondo con l'esito e poi si riduce di nuovo.
-# Parte dal file AVVIA_TIMBRATURA_SALVASCHERMO.bat. Si ferma solo con CHIUDI_TIMBRATURA_FINESTRELLA.bat (come la finestrella).
+# Parte dal file AVVIA_TIMBRATURA_SALVASCHERMO.bat. Si ferma solo con CHIUDI_TIMBRATURA.bat.
 # Lo stato lo dice la pagina nel titolo della finestra: "[salvaschermo]" oppure "[badge]" (per qualche secondo dopo un passaggio).
 param(
   [string]$Url = '',
@@ -41,9 +41,9 @@ if ($Prova) { Write-Output ("PROVA: IdleMs=" + [NvsSav]::IdleMs() + " LastTick="
 $logFile = Join-Path $env:LOCALAPPDATA 'NVS_timbratura_log.txt'
 function Scrivi-Log($m) { try { if ((Test-Path $logFile) -and (Get-Item $logFile).Length -gt 200KB) { Remove-Item $logFile -ErrorAction SilentlyContinue }; Add-Content -Path $logFile -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + '  [salvaschermo] ' + $m) -ErrorAction SilentlyContinue } catch {} }
 Scrivi-Log ("avvio script - Url=" + ($Url -replace '#pin=\d+', '#pin=***') + " - Profilo=" + $Profilo + " - MinutiFermo=" + $MinutiFermo)
-# una sola copia alla volta (stesso nome della finestrella: i due programmi non possono andare insieme)
+# una sola copia alla volta (una sola copia alla volta)
 $mutex = New-Object System.Threading.Mutex($false, 'NVS_TIMBRATURA_SOPRA')
-if (-not $mutex.WaitOne(0)) { Scrivi-Log "ESCO: c'e' gia' un'altra copia attiva (finestrella o salvaschermo): usa CHIUDI_TIMBRATURA_FINESTRELLA.bat e riprova"; exit }
+if (-not $mutex.WaitOne(0)) { Scrivi-Log "ESCO: c'e' gia' un'altra copia attiva (salvaschermo): usa CHIUDI_TIMBRATURA.bat e riprova"; exit }
 
 $TOPMOST = [IntPtr](-1); $NOTOPMOST = [IntPtr](-2)
 $profiloMask = '*NVS_timbratura_finestrella*'
@@ -104,7 +104,7 @@ $conta = 0; $hCorr = [IntPtr]::Zero
 $stato = 'saver'           # saver = schermo intero | icona = ridotta a icona | badge = mostrata per il passaggio di un badge
 $tickBase = [NvsSav]::LastTick()
 while ($true) {
-  if (Test-Path $stop) { break }                                 # chiusura voluta (CHIUDI_TIMBRATURA_FINESTRELLA.bat)
+  if (Test-Path $stop) { break }                                 # chiusura voluta (CHIUDI_TIMBRATURA.bat)
   $conta++
   if ($gp) { $gp = Get-Process -Id $gp.Id -ErrorAction SilentlyContinue }
   if (-not $gp -or ($conta % 12) -eq 0) { $gp = Cerca-Browser }

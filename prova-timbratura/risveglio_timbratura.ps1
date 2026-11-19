@@ -40,7 +40,7 @@ switch ($Azione) {
       Write-Output ('Impostazioni attuali salvate in ' + $orig)
     }
     Imposta-Valore 'SUB_SLEEP' 'RTCWAKE' 1; Applica     # timer di riattivazione consentiti
-    # avvio automatico del salvaschermo all'accesso a Windows (sostituisce quello della finestrella)
+    # avvio automatico del salvaschermo all'accesso a Windows 
     if ($Startup) {
       $vecchio = Join-Path $Startup 'NVS Timbratura.lnk'; if (Test-Path $vecchio) { Remove-Item $vecchio -Force }
       $l = Join-Path $Startup 'NVS Timbratura salvaschermo.lnk'
